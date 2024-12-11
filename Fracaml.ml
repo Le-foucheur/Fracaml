@@ -93,23 +93,6 @@ let premier =
   {array = pre}
 ;;
 
-
-let print_array a =
-  let n = Array.length a in
-  for i = 0 to n - 2 do 
-    Printf.printf "%d^%Ld ;" premier.array.(i) a.(i)
-  done;
-  Printf.printf "%d^%Ld\n" premier.array.(n-1) a.(n-1)
-;;
-
-let print_arrayi a =
-  let n = Array.length a in
-  for i = 0 to n - 2 do 
-    Printf.printf "%d ;" a.(i)
-  done;
-  Printf.printf "%d\n" a.(n-1)
-;;
-
 (* fonction de décomposition en nombres premier *)
 let rec decompo n = 
   let tmp = ref n in
@@ -126,10 +109,17 @@ let rec decompo n =
   done;
   if !k >= taille - 1 || premier.array.(!k) = 0 then begin
     addArray premier (Int64.to_int !tmp) (!k+1);
-    print_arrayi premier.array;
     res := decompo n
   end;
   !res
+;;
+
+let print_array a =
+  let n = Array.length a in
+  for i = 0 to n - 2 do 
+    Printf.printf "%d^%Ld ;" premier.array.(i) a.(i)
+  done;
+  Printf.printf "%d^%Ld\n" premier.array.(n-1) a.(n-1)
 ;;
 
 print_list progBrut;;
