@@ -1,14 +1,8 @@
 exception Tcon
 
-let debug () = Printf.printf "AHTCON\n";;
+let debug () = Printf.printf "AH TCon\n";;
 
 type arrayD = {mutable array: int array}
-
-let rec print_list l = 
-  match l with
-  | [] -> print_newline ()
-  | (e, a) :: q -> Printf.printf "(%Ld, %Ld); " e a; print_list q
-;;
 
 let rec addArray a e i = 
   let n = Array.length a.array in
@@ -26,7 +20,7 @@ let rec addArray a e i =
 ;;
 
 (* le programe a executer *)
-let prog = open_in (Sys.argv.(1))
+let prog = open_in Sys.argv.(1)
 
 (* racine carré d'un entier *)
 let sqrti n = n |> Int64.to_float |> sqrt |> floor |> int_of_float
@@ -79,7 +73,7 @@ let crible =
   cri
 ;;
 
-(* créé un array qui comporte les nombre premier utilisé *)
+(* créé un array qui comporte les nombre premier utilisé : premier.array.(i) <=> la fonction qui a i associe le i ème nb premier *)
 let premier = 
   let taille = Array.fold_left (fun acc a -> if a then acc + 1 else acc) (-2) crible in
   let pre = Array.make taille 1 in
@@ -114,14 +108,65 @@ let rec decompo n =
   !res
 ;;
 
+(* fonction de décomposition en nombres premier pour les diviseur qui aurons une puissance négative *)
+let rec decompoNeg n = 
+  let tmp = ref n in
+  let taille = Array.length premier.array in
+  let res = ref (Array.make taille 0L) in
+  let k = ref 0 in
+  while !tmp > 1L && premier.array.(!k) <> 0 && !k < taille - 1 do
+    if Int64.rem !tmp (Int64.of_int premier.array.(!k)) = 0L then begin
+      !res.(!k) <- Int64.sub !res.(!k) 1L;
+      tmp := Int64.div !tmp (Int64.of_int premier.array.(!k));
+    end
+    else
+      incr k
+  done;
+  if !k >= taille - 1 || premier.array.(!k) = 0 then begin
+    addArray premier (Int64.to_int !tmp) (!k+1);
+    res := decompoNeg n
+  end;
+  !res
+;;
+
+let n0 = decompo (Int64.of_string Sys.argv.(2))
+
 let print_array a =
   let n = Array.length a in
   for i = 0 to n - 2 do 
-    Printf.printf "%d^%Ld ;" premier.array.(i) a.(i)
+    Printf.printf "%d^%Ld * " premier.array.(i) a.(i)
   done;
-  Printf.printf "%d^%Ld\n" premier.array.(n-1) a.(n-1)
+  Printf.printf "%d^%Ld\n\n" premier.array.(n-1) a.(n-1)
 ;;
 
-print_list progBrut;;
+let rec print_list l = 
+  match l with
+  | [] -> print_newline ()
+  | (e, a) :: q -> (print_array e; print_string "; "; print_array a; print_string "; "; print_list q)
+;;
 
-decompo maxnb |> print_array
+let n0 = decompo @@ Int64.of_string Sys.argv.(2)
+
+let rec test p = 
+  match p with
+  | [] -> print_newline ()
+  | (e, a)::q -> (print_array  @@ decompo e; print_array @@ decompoNeg a; test q)
+;;
+
+test progBrut;;
+
+
+(* let programme =
+  let hein = ref [] in
+  let rec test2 p = 
+    match p with
+    | [] -> ()
+    | (e, a)::q -> hein := (decompo e, decompoNeg a)::!hein; test2 q
+  in
+  test2 progBrut;
+  List.rev !hein
+;;
+
+print_list programme;;
+
+print_array n0 *)
