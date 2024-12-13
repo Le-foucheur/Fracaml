@@ -1,3 +1,4 @@
+(* la merde pour parser les option et tout le reste *)
 let usage_msg = "  ./Fracaml <programme.txt> N0 [option]\n
 - Le programme doit être dans un fichier txt
 - N0 est le nombre par le quel la séquance commence
@@ -21,6 +22,7 @@ let speclist =
 let () = Arg.parse speclist anon_fun usage_msg;;
 
 input_files := List.rev !input_files;;
+(* fin de la merde *)
 
 (* pour savoir quel sont les coef premier a afficher, si [] alors il sont tous a afficher *)
 let valpadl = 
