@@ -2,3 +2,5 @@
 *.cmx
 *.o
 *.cmo
+.gitignore
+teste.txt
