@@ -1,4 +1,7 @@
-let usage_msg = "./Fracaml <file1> N0 [option]"
+let usage_msg = "  ./Fracaml <programme.txt> N0 [option]\n
+- Le programme doit être dans un fichier txt
+- N0 est le nombre par le quel la séquance commence
+"
 let valpad = ref ""
 let distance = ref (-1)
 let input_files = ref []
@@ -9,9 +12,9 @@ let anon_fun filename = input_files := filename::!input_files
 
 let speclist =
   [
-    ("-v", Arg.Set_string valpad, "affiche seulement les puissance des premiers spécifiés");
-    ("-d", Arg.Set_int distance, "affiche jusqu'au n ieme terme");
-    ("-D", Arg.Set dernier, "affiche le dernier nombre atteint quand le programme termine");
+    ("-v", Arg.Set_string valpad, "     Affiche seulement les puissance des premiers spécifiés");
+    ("-d", Arg.Set_int distance, "     Affiche jusqu'au n ieme terme");
+    ("-D", Arg.Set dernier, "     Affiche le dernier nombre atteint quand le programme termine");
     ("-help", (Arg.Set ah), "")
   ]
 
@@ -19,6 +22,7 @@ let () = Arg.parse speclist anon_fun usage_msg;;
 
 input_files := List.rev !input_files;;
 
+(* pour savoir quel sont les coef premier a afficher, si [] alors il sont tous a afficher *)
 let valpadl = 
   let n = String.length !valpad in
   if n = 0 then
@@ -38,17 +42,17 @@ let valpadl =
     (int_of_string !tmp)::!res
 ;;
 
-exception Tcon
+(* les exection utilier *)
+exception Tcon 
 exception NonEntier
 exception FinProgramme
 
-let debug () = Printf.printf "AH TCon\n"; flush_all ();;
-
+(* les type utiliser *)
 type arrayD = {mutable array: int array}
-
 type decompo = int64 array
 type fracD = decompo * decompo
 
+(* pour rajouter un nombre dans un array redimentionable *)
 let rec addArray a e i = 
   let n = Array.length a.array in
   if i < n then begin
@@ -73,6 +77,7 @@ let prog =
     open_in e
 ;;
 
+(* permière lecture du n0 *)
 let n0 = 
   match !input_files with
   | [] -> raise FinProgramme
@@ -82,14 +87,6 @@ let n0 =
 
 (* racine carré d'un entier *)
 let sqrti n = n |> Int64.to_float |> sqrt |> floor |> int_of_float
-
-let print_array2 a =
-  let n = Array.length a in
-  for i = 0 to n-1 do
-    Printf.printf "%d " a.(i)
-  done;
-  print_newline ()
-;;
 
 (* le prog et le met dans une list temporaire *)
 let progBrut = 
@@ -115,6 +112,7 @@ let progBrut =
   with End_of_file -> List.rev !tmp
 ;;
 
+(* détermine le nombre le plus grand utilisé *)
 let maxnb = 
   let rec aux l =
     match l with
@@ -159,8 +157,6 @@ let rec decompo n : decompo =
   let taille = Array.length premier.array in
   let res = ref (Array.make taille 0L) in
   let k = ref 0 in
-  (* let deb () = Printf.printf "tmp = %Ld, k = %d, taille = %d, pre = %d\n" !tmp !k taille premier.array.(!k); print_array2 !res; flush_all ()
-  in *)
   while !tmp > 1L && premier.array.(!k) <> 1 && !k < taille - 1 do
     if Int64.rem !tmp (Int64.of_int premier.array.(!k)) = 0L then begin
       !res.(!k) <- Int64.add !res.(!k) 1L;
@@ -181,13 +177,14 @@ let rec decompo n : decompo =
   !res
 ;;
 
+(* print la décomposition d'un nombre, qui est représenter comme ce ci dans un array redimentionable *)
 let print_decompo (a : decompo) =
   let n = Array.length a in
-  let mark = ref false in
+  let mark = ref false in (* marque le moment ou un nombre a été afficher *)
   if valpadl = [] then begin
     for i = 0 to n - 2 do
-      if premier.array.(i) <> 1 && a.(i) <> 0L then begin
-        if (i <> 0 && premier.array.(i - 1) <> 1 && a.(i - 1) <> 0L) || !mark then begin
+      if premier.array.(i) <> 1 && a.(i) <> 0L then begin (* on n'affiche pas si c'est pas un premier ou si sa puissance est nul *)
+        if (i <> 0 && premier.array.(i - 1) <> 1 && a.(i - 1) <> 0L) || !mark then begin (* affiche un « * » si c'est pas le permier élément afficher *)
           print_string " * ";
         end;
         mark := true;
@@ -198,7 +195,7 @@ let print_decompo (a : decompo) =
       Printf.printf " * %d^%Ld" premier.array.(n-1) a.(n-1)
   end
   else begin
-    for i = 0 to n - 2 do
+    for i = 0 to n - 2 do (* ici le condition d'affichage sont les même, sauf si le nombre n'est pas un demender a être affiché représenter par le List.mem *)
       if List.mem premier.array.(i) valpadl && premier.array.(i) <> 1 && a.(i) <> 0L then begin
         if (i <> 0 && List.mem premier.array.(i - 1) valpadl && premier.array.(i - 1) <> 1 && a.(i - 1) <> 0L) || !mark then begin
           print_string " * ";
@@ -212,6 +209,7 @@ let print_decompo (a : decompo) =
   end
 ;;
 
+(* premet de print un type farction en métant un / entre les deux nombre *)
 let print_frac f = 
   let t, b = f in
   print_decompo t;
@@ -220,12 +218,7 @@ let print_frac f =
   print_newline ()
 ;;
 
-let rec print_list l = 
-  match l with
-  | [] -> print_newline ()
-  | e :: q -> (print_frac e; print_list q)
-;;
-
+(* premet de simplifier une fraction *)
 let simplifier (frac : fracD) : fracD = 
   let dividende, diviseur = frac in
   let taille = min (Array.length dividende) (Array.length diviseur) in
@@ -244,6 +237,7 @@ let simplifier (frac : fracD) : fracD =
   (dividende, diviseur)
 ;;
 
+(* transforme le programme « brut » (les int) en le programme « raffiner » (leur décomposition en facteur premier) *)
 let programme =
   let rec affinage p l = 
     match p with
@@ -253,6 +247,7 @@ let programme =
   affinage progBrut [] |> List.rev
 ;;
 
+(* transforme n0 en sa décomposition en facteur premier *)
 let n0 = decompo n0;;
 
 let mult (n : decompo) (f : fracD) : decompo =
@@ -268,6 +263,7 @@ let mult (n : decompo) (f : fracD) : decompo =
   n
 ;;
 
+(* execute un tour de programme pour déterminer le prochain entier *)
 let rec execute p n =
   let tmp = Array.copy n in
   match p with
@@ -278,6 +274,7 @@ let rec execute p n =
     with NonEntier -> execute q n
 ;;
 
+(* execute le programme jusqu'a ce qu'il termine (si c'est le cas) *)
 let rec main compteur n : unit =
   try
     if !distance = -1 || compteur <= !distance then begin
@@ -291,6 +288,7 @@ let rec main compteur n : unit =
   with FinProgramme -> Printf.printf "\nFin Du Programme :)\n"
 ;;
 
+(* sa variante si le flag -D est passé, et donc doit juste afficher le dernier nombre *)
 let rec main_D compteur n : unit =
   try
     if !distance = -1 || compteur <= !distance then begin
@@ -301,6 +299,7 @@ let rec main_D compteur n : unit =
   with FinProgramme -> Printf.printf "\nRésulat : "; print_decompo n; Printf.printf "\n\nFin Du Programme :)\n"
 ;;
 
+(* execute le programme *)
 if !dernier then
   main_D 0 n0
 else
