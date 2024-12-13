@@ -1,6 +1,6 @@
 exception Tcon
 
-let debug () = Printf.printf "AH TCon\n";;
+let debug () = Printf.printf "AH TCon\n"; flush_all ();;
 
 type arrayD = {mutable array: int array}
 
@@ -60,13 +60,13 @@ let maxnb =
 
 (* littéralement le crible d'ératostène *)
 let crible = 
-  let taille = sqrti maxnb + 1 in
-  let cri = Array.make (taille + 2) true in
-  for i = 2 to taille + 1 do (* commance a 2 car 0 et 1 pas vraiment premier*)
+  let taille = sqrti maxnb + 2 in
+  let cri = Array.make (taille + 3) true in
+  for i = 2 to taille + 2 do (* commance a 2 car 0 et 1 pas vraiment premier*)
     if cri.(i) then
-      for j = i to taille + 1 do 
+      for j = i to taille + 2 do 
         let ind = i * j in
-        if ind <= taille + 1 then
+        if ind <= taille + 2 then
           cri.(ind) <- false
       done
   done;
@@ -87,49 +87,41 @@ let premier =
   {array = pre}
 ;;
 
+let print_array2 a =
+  let n = Array.length a in
+  for i = 0 to n - 2 do 
+    Printf.printf "%d^%Ld * " premier.array.(i) a.(i)
+  done;
+  Printf.printf "%d^%Ld\n\n" premier.array.(n-1) a.(n-1)
+;;
+
 (* fonction de décomposition en nombres premier *)
 let rec decompo n = 
   let tmp = ref n in
   let taille = Array.length premier.array in
   let res = ref (Array.make taille 0L) in
   let k = ref 0 in
-  while !tmp > 1L && premier.array.(!k) <> 0 && !k < taille - 1 do
+  (* let deb () = Printf.printf "tmp = %Ld, k = %d, taille = %d, pre = %d\n" !tmp !k taille premier.array.(!k); print_array2 !res; flush_all ()
+  in *)
+  while !tmp > 1L && premier.array.(!k) <> 1 && !k < taille - 1 do
     if Int64.rem !tmp (Int64.of_int premier.array.(!k)) = 0L then begin
       !res.(!k) <- Int64.add !res.(!k) 1L;
       tmp := Int64.div !tmp (Int64.of_int premier.array.(!k));
     end
     else
       incr k
-  done;
-  if !k >= taille - 1 || premier.array.(!k) = 0 then begin
-    addArray premier (Int64.to_int !tmp) (!k+1);
-    res := decompo n
-  end;
-  !res
-;;
-
-(* fonction de décomposition en nombres premier pour les diviseur qui aurons une puissance négative *)
-let rec decompoNeg n = 
-  let tmp = ref n in
-  let taille = Array.length premier.array in
-  let res = ref (Array.make taille 0L) in
-  let k = ref 0 in
-  while !tmp > 1L && premier.array.(!k) <> 0 && !k < taille - 1 do
-    if Int64.rem !tmp (Int64.of_int premier.array.(!k)) = 0L then begin
-      !res.(!k) <- Int64.sub !res.(!k) 1L;
-      tmp := Int64.div !tmp (Int64.of_int premier.array.(!k));
+    done;
+  if (!k >= taille - 1 || premier.array.(!k) = 1) && !tmp > 1L then begin
+    if !k >= taille - 1 then begin
+      addArray premier (Int64.to_int !tmp) (!k+1)
     end
-    else
-      incr k
-  done;
-  if !k >= taille - 1 || premier.array.(!k) = 0 then begin
-    addArray premier (Int64.to_int !tmp) (!k+1);
-    res := decompoNeg n
+    else begin
+      addArray premier (Int64.to_int !tmp) !k
+    end;
+    res := decompo n;
   end;
   !res
 ;;
-
-let n0 = decompo (Int64.of_string Sys.argv.(2))
 
 let print_array a =
   let n = Array.length a in
@@ -145,28 +137,13 @@ let rec print_list l =
   | (e, a) :: q -> (print_array e; print_string "; "; print_array a; print_string "; "; print_list q)
 ;;
 
-let n0 = decompo @@ Int64.of_string Sys.argv.(2)
-
-let rec test p = 
-  match p with
-  | [] -> print_newline ()
-  | (e, a)::q -> (print_array  @@ decompo e; print_array @@ decompoNeg a; test q)
-;;
-
-test progBrut;;
-
-
-(* let programme =
-  let hein = ref [] in
-  let rec test2 p = 
+let programme =
+  let rec affinage p l = 
     match p with
-    | [] -> ()
-    | (e, a)::q -> hein := (decompo e, decompoNeg a)::!hein; test2 q
+    | [] -> l
+    | (e, a)::q -> affinage q ((decompo e, decompo a)::l)
   in
-  test2 progBrut;
-  List.rev !hein
+  affinage progBrut [] |> List.rev
 ;;
 
-print_list programme;;
-
-print_array n0 *)
+let n0 = decompo (Int64.of_string Sys.argv.(2));;
