@@ -1,5 +1,5 @@
 *.txt
-!/exemple/
+!/exemple/*
 *.cmi
 *.cmx
 *.o
