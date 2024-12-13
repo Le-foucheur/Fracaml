@@ -1,6 +1,6 @@
+*.txt
+!/exemple/
 *.cmi
 *.cmx
 *.o
 *.cmo
-.gitignore
-teste.txt
