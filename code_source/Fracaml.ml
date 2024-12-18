@@ -29,6 +29,8 @@ let () = Arg.parse speclist anon_fun usage_msg;;
 input_files := List.rev !input_files;;
 (* fin de la merde *)
 
+let debug () = Printf.printf "\n\nAH Tcon\n\n"; flush_all ();;
+
 (* pour savoir quel sont les coef premier a afficher, si [] alors il sont tous a afficher *)
 let valpadl = 
   let n = String.length !valpad in
@@ -123,7 +125,7 @@ let progBrut =
       let c1 = ref "" in
       let c2 = ref "" in
       
-      while ligne.[!k] != ' ' do 
+      while ligne.[!k] <> ' ' && ligne.[!k] <> '/' do 
         c1 := !c1^(String.make 1 ligne.[!k]);
         incr k  
       done;
@@ -202,7 +204,7 @@ let rec decompo n : decompo =
   !res
 ;;
 
-(* print la décomposition d'un nombre, qui est représenter comme ce ci dans un array redimentionable *)
+(* print la décomposition d'un nombre qui conviens à l'utilisateur, qui est représenter comme ce ci dans un array redimentionable *)
 let print_decompo (a : decompo) =
   let n = Array.length a in
   let mark = ref false in (* marque le moment ou un nombre a été afficher *)
@@ -247,12 +249,23 @@ let print_decompo (a : decompo) =
   end
 ;;
 
+let print_decompo_Pur (a : decompo) =
+  let n = Array.length a in
+  for i = 0 to n - 2 do
+    if i <> 0 then begin
+      print_string " * "
+    end;
+    Printf.printf "%d^%Ld" premier.array.(i) a.(i)
+  done;
+    Printf.printf " * %d^%Ld" premier.array.(n-1) a.(n-1)
+;;
+
 (* premet de print un type farction en métant un / entre les deux nombre *)
 let print_frac f = 
   let t, b = f in
-  print_decompo t;
+  print_decompo_Pur t;
   print_string " / ";
-  print_decompo b;
+  print_decompo_Pur b;
   print_newline ()
 ;;
 
@@ -282,23 +295,56 @@ let programme =
     | [] -> l
     | (e, a)::q -> affinage q ((simplifier (decompo e, decompo a))::l)
   in
-  affinage progBrut [] |> List.rev
+  affinage progBrut []
 ;;
 
 (* transforme n0 en sa décomposition en facteur premier *)
 let n0 = decompo n0;;
 
+(* la taille de tout les array suivant *)
+let tailleArray = Array.length premier.array;;
+
+(* pour faire en sorte que tout les arrays fassent la même taille *)
+let (n0 : decompo) = 
+  let res = Array.make tailleArray 0L in
+  for i = 0 to Array.length n0 - 1 do
+    res.(i) <- n0.(i)
+  done;
+  res
+;;
+
+(* pour faire en sorte que tout les arrays fassent la même taille *)
+let (programme : fracD list) = 
+  let rec aux p l = 
+    match p with
+    | [] -> l
+    | (e, a) :: q -> begin
+      let f1 = Array.make tailleArray 0L in
+      let f2 = Array.make tailleArray 0L in
+      for i = 0 to Array.length e - 1 do
+        f1.(i) <- e.(i)
+      done;
+      for i = 0 to Array.length a - 1 do
+        f2.(i) <- a.(i)
+      done;
+      aux q ((f1,f2)::l)
+    end
+  in
+  aux programme []
+;;
+
+(* pour multiplier un entier et une fraction et renvoye l'exeption NonEntier si la multiplication ne fournie pas un entier *)
 let mult (n : decompo) (f : fracD) : decompo =
-  let n = n in
+  let res = Array.copy n in
   let f1, f2 = f in
-  let taille = Array.length n in
+  let taille = Array.length res in
   for i = 0 to taille - 1 do
-    if (Int64.sub n.(i) f2.(i) |> Int64.add f1.(i)) < 0L then
+    if (Int64.sub res.(i) f2.(i) |> Int64.add f1.(i)) < 0L then
       raise NonEntier
     else
-      n.(i) <- (Int64.sub n.(i) f2.(i) |> Int64.add f1.(i))
+      res.(i) <- (Int64.sub res.(i) f2.(i) |> Int64.add f1.(i));
   done;
-  n
+  res
 ;;
 
 (* execute un tour de programme pour déterminer le prochain entier *)
@@ -308,7 +354,8 @@ let rec execute p n =
   | [] -> raise FinProgramme
   | frac :: q ->
     try
-      mult tmp frac
+      let tmp = mult tmp frac in
+      tmp
     with NonEntier -> execute q n
 ;;
 
@@ -324,7 +371,8 @@ let rec main compteur n : unit =
       end;
       print_decompo n;
       print_newline ();
-      execute programme n |> main (compteur + 1)
+      flush_all ();
+      execute programme n |> main (compteur + 1);
     end
     else
       raise FinProgramme
@@ -356,6 +404,7 @@ let rec main_vpex compteur n : unit =
         print_decompo n;
         print_newline ();
       end;
+      flush_all ();
       execute programme n |> main_vpex (compteur + 1)
     end
     else
