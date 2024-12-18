@@ -4,18 +4,23 @@ let usage_msg = "  ./Fracaml <programme.txt> N0 [option]\n
 - N0 est le nombre par le quel la séquance commence
 "
 let valpad = ref ""
+let valpadex = ref ""
 let distance = ref (-1)
 let input_files = ref []
 let ah = ref true
 let dernier = ref false
+
+let decimal = ref false
 
 let anon_fun filename = input_files := filename::!input_files
 
 let speclist =
   [
     ("-v", Arg.Set_string valpad, "     Affiche seulement les puissance des premiers spécifiés");
+    ("-V", Arg.Set_string valpadex, "     Affiche seulement les puissance des premiers spécifiés et si c'est les seul non nul");
     ("-d", Arg.Set_int distance, "     Affiche jusqu'au n ieme terme");
     ("-D", Arg.Set dernier, "     Affiche le dernier nombre atteint quand le programme termine");
+    ("-dec", Arg.Set decimal, "     Affiche le compteur en décimal");
     ("-help", (Arg.Set ah), "")
   ]
 
@@ -36,7 +41,25 @@ let valpadl =
       if !valpad.[i] <> ' ' then
         tmp := !tmp ^ String.make 1 !valpad.[i]
       else begin
-        Printf.printf"%s\n" !tmp;
+        res := (int_of_string !tmp)::!res;
+        tmp := ""
+      end
+    done;
+    (int_of_string !tmp)::!res
+;;
+
+(* pour savoir quel sont les coef premier exclusif a afficher, si [] alors il sont tous a afficher *)
+let valpadlex = 
+  let n = String.length !valpadex in
+  if n = 0 then
+    []
+  else
+    let tmp = ref "" in
+    let res = ref [] in
+    for i = 0 to n - 1 do
+      if !valpadex.[i] <> ' ' then
+        tmp := !tmp ^ String.make 1 !valpadex.[i]
+      else begin
         res := (int_of_string !tmp)::!res;
         tmp := ""
       end
@@ -183,7 +206,7 @@ let rec decompo n : decompo =
 let print_decompo (a : decompo) =
   let n = Array.length a in
   let mark = ref false in (* marque le moment ou un nombre a été afficher *)
-  if valpadl = [] then begin
+  if valpadl = [] && valpadlex = [] then begin
     for i = 0 to n - 2 do
       if premier.array.(i) <> 1 && a.(i) <> 0L then begin (* on n'affiche pas si c'est pas un premier ou si sa puissance est nul *)
         if (i <> 0 && premier.array.(i - 1) <> 1 && a.(i - 1) <> 0L) || !mark then begin (* affiche un « * » si c'est pas le permier élément afficher *)
@@ -196,7 +219,7 @@ let print_decompo (a : decompo) =
     if premier.array.(n-1) <> 1 && a.(n-1) <> 0L then
       Printf.printf " * %d^%Ld" premier.array.(n-1) a.(n-1)
   end
-  else begin
+  else if valpadlex = [] then begin
     for i = 0 to n - 2 do (* ici le condition d'affichage sont les même, sauf si le nombre n'est pas un demender a être affiché représenter par le List.mem *)
       if List.mem premier.array.(i) valpadl && premier.array.(i) <> 1 && a.(i) <> 0L then begin
         if (i <> 0 && List.mem premier.array.(i - 1) valpadl && premier.array.(i - 1) <> 1 && a.(i - 1) <> 0L) || !mark then begin
@@ -207,6 +230,19 @@ let print_decompo (a : decompo) =
       end
     done;
     if List.mem premier.array.(n-1) valpadl  && premier.array.(n-1) <> 1 && a.(n-1) <> 0L && !mark then
+      Printf.printf " * %d^%Ld" premier.array.(n-1) a.(n-1)
+  end
+  else begin
+    for i = 0 to n - 2 do (* ici le condition d'affichage sont les même, sauf si le nombre n'est pas un demender a être affiché représenter par le List.mem sans la cond de la puissance nul *)
+      if List.mem premier.array.(i) valpadlex && premier.array.(i) <> 1 then begin
+        if (i <> 0 && List.mem premier.array.(i - 1) valpadlex && premier.array.(i - 1) <> 1) || !mark then begin
+          print_string " * ";
+        end;
+        mark := true;
+        Printf.printf "%d^%Ld" premier.array.(i) a.(i)
+      end
+    done;
+    if List.mem premier.array.(n-1) valpadlex  && premier.array.(n-1) <> 1 && !mark then
       Printf.printf " * %d^%Ld" premier.array.(n-1) a.(n-1)
   end
 ;;
@@ -280,10 +316,47 @@ let rec execute p n =
 let rec main compteur n : unit =
   try
     if !distance = -1 || compteur <= !distance then begin
-      Printf.printf "%d :  " (compteur mod 10);
+      if !decimal then begin
+        Printf.printf "%-6d : " @@ compteur mod 100000
+      end
+      else begin
+      Printf.printf "%-6X :  " @@ compteur mod 1048576
+      end;
       print_decompo n;
       print_newline ();
       execute programme n |> main (compteur + 1)
+    end
+    else
+      raise FinProgramme
+  with FinProgramme -> Printf.printf "\nFin Du Programme :)\n"
+;;
+
+(* vérifie si les seuls coef premier != 1 sont bien ceux demander *)
+let cond_exclu (dec : decompo) =
+  let taille = Array.length dec in
+  let res = ref true in
+  for i = 0 to taille - 1 do
+    if not (List.mem premier.array.(i) valpadlex) && dec.(i) <> 0L then
+      res := false
+  done;
+  !res
+;;
+
+(* execute le programme jusqu'a ce qu'il termine (si c'est le cas) *)
+let rec main_vpex compteur n : unit =
+  try
+    if !distance = -1 || compteur <= !distance then begin
+      if cond_exclu n then begin
+        if !decimal then begin
+          Printf.printf "%-6d : " @@ compteur mod 100000
+        end
+        else begin
+          Printf.printf "%-6X : " @@ compteur mod 1048576
+        end;
+        print_decompo n;
+        print_newline ();
+      end;
+      execute programme n |> main_vpex (compteur + 1)
     end
     else
       raise FinProgramme
@@ -302,7 +375,12 @@ let rec main_D compteur n : unit =
 ;;
 
 (* execute le programme *)
-if !dernier then
+if !dernier && valpadlex = [] then begin
   main_D 0 n0
-else
+end
+else if valpadlex <> [] then begin
+  main_vpex 0 n0
+end
+else begin
   main 0 n0
+end
